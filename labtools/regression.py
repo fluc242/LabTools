@@ -23,6 +23,102 @@ def y_estrapolato(x, m, c, sigma_m, sigma_c, cov_mc):
     return y, uy #ho propagato semplicemente l'incertezza sulla y avendo assunto x noto con precisione massima
 
 def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0., yM=1., verbose=True, plot=False, setrange=False):
+    """
+    Esegue un fit lineare pesato considerando le incertezze sulle ordinate
+    e assumendo trascurabili le incertezze sulle ascisse.
+
+    Il modello utilizzato è:
+        y = m*x + c
+
+    Il fit viene effettuato mediante il metodo dei minimi quadrati pesati,
+    con pesi:
+        w_i = 1 / sd_y_i**2
+
+    Parameters
+    ----------
+    x : array_like
+        Valori sperimentali delle ascisse.
+
+    y : array_like
+        Valori sperimentali delle ordinate.
+
+    sd_y : array_like
+        Incertezze assolute sui valori di y.
+        Devono essere strettamente positive.
+
+    xlabel : str, optional
+        Etichetta dell'asse x del grafico.
+        Default: "x [ux]".
+
+    ylabel : str, optional
+        Etichetta dell'asse y del grafico.
+        Default: "y [uy]".
+
+    xm, xM : float, optional
+        Limite inferiore e superiore dell'asse x.
+        Vengono utilizzati soltanto se setrange=True.
+
+    ym, yM : float, optional
+        Limite inferiore e superiore dell'asse y.
+        Vengono utilizzati soltanto se setrange=True.
+
+    verbose : bool, optional
+        Se True, stampa i risultati numerici del fit.
+        Default: True.
+
+    plot : bool, optional
+        Se True, rappresenta i dati sperimentali, la retta di fit
+        e le bande di incertezza a 1 sigma.
+        Default: False.
+
+    setrange : bool, optional
+        Se True, utilizza i limiti degli assi specificati
+        attraverso xm, xM, ym e yM.
+        Default: False.
+
+    Returns
+    -------
+    m : float
+        Coefficiente angolare della retta.
+
+    sm : float
+        Incertezza sul coefficiente angolare.
+
+    c : float
+        Intercetta della retta.
+
+    sc : float
+        Incertezza sull'intercetta.
+
+    cov_mc : float
+        Covarianza tra coefficiente angolare e intercetta.
+
+    rho_mc : float
+        Coefficiente di correlazione tra m e c.
+
+    results : ndarray
+        Array contenente, nell'ordine:
+        [media pesata di x,
+         media pesata di y,
+         media pesata di x**2,
+         media pesata di x*y,
+         varianza pesata di x,
+         covarianza pesata tra x e y,
+         somma dei pesi].
+
+    Notes
+    -----
+    Le incertezze sulle ascisse non vengono considerate.
+    Per tenerne conto utilizzare lin_fit().
+
+    L'incertezza sulla retta estrapolata viene calcolata
+    assumendo x noto con precisione massima.
+
+    Examples
+    --------
+    >>> m, sm, c, sc, cov, rho, results = lin_fit_0(x, y, uy)
+    """
+    
     #Converto in array numpy
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
@@ -109,6 +205,112 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
 #fit iterato (1 volta) con incertezze sulle x
 
 def lin_fit(x, ux, y, uy, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0., yM=1., verbose=True, plot=True, setrange=False):
+    """
+    Esegue un fit lineare considerando le incertezze sia sulle ascisse
+    sia sulle ordinate, mediante una procedura iterativa a un solo
+    aggiornamento delle incertezze.
+
+    Il modello utilizzato è:
+        y = m*x + c
+
+    PROCEDIMENTO
+    -----------
+    1. Esegue un primo fit mediante lin_fit_0(), considerando
+       esclusivamente le incertezze sulle ordinate uy.
+
+    2. Utilizza il coefficiente angolare m0 ottenuto per calcolare
+       le nuove incertezze effettive sulle ordinate:
+
+           uy_new = sqrt(uy**2 + (m0*ux)**2)
+
+    3. Esegue un secondo fit mediante lin_fit_0(), utilizzando
+       le nuove incertezze uy_new.
+
+    Il risultato restituito è quello del secondo fit.
+
+    Parameters
+    ----------
+    x : array_like
+        Valori sperimentali delle ascisse.
+
+    ux : array_like
+        Incertezze assolute sui valori di x.
+        Devono essere non negative.
+
+    y : array_like
+        Valori sperimentali delle ordinate.
+
+    uy : array_like
+        Incertezze assolute sui valori di y.
+        Devono essere strettamente positive.
+
+    xlabel : str, optional
+        Etichetta dell'asse x del grafico.
+        Default: "x [ux]".
+
+    ylabel : str, optional
+        Etichetta dell'asse y del grafico.
+        Default: "y [uy]".
+
+    xm, xM : float, optional
+        Limite inferiore e superiore dell'asse x.
+        Vengono utilizzati soltanto se setrange=True.
+
+    ym, yM : float, optional
+        Limite inferiore e superiore dell'asse y.
+        Vengono utilizzati soltanto se setrange=True.
+
+    verbose : bool, optional
+        Se True, stampa i risultati numerici del secondo fit.
+        Default: True.
+
+    plot : bool, optional
+        Se True, rappresenta i dati sperimentali, la retta di fit
+        e le bande di incertezza a 1 sigma.
+        Default: True.
+
+    setrange : bool, optional
+        Se True, utilizza i limiti degli assi specificati
+        attraverso xm, xM, ym e yM.
+        Default: False.
+
+    Returns
+    -------
+    m : float
+        Coefficiente angolare del secondo fit.
+
+    sm : float
+        Incertezza sul coefficiente angolare.
+
+    c : float
+        Intercetta del secondo fit.
+
+    sc : float
+        Incertezza sull'intercetta.
+
+    cov : float
+        Covarianza tra coefficiente angolare e intercetta.
+
+    rho : float
+        Coefficiente di correlazione tra m e c.
+
+    results : ndarray
+        Array contenente le quantità statistiche del secondo fit,
+        con la stessa struttura restituita da lin_fit_0().
+
+    Notes
+    -----
+    La procedura effettua un solo aggiornamento delle incertezze:
+    non è quindi un algoritmo iterativo fino a convergenza e non
+    costituisce un fit ODR completo.
+
+    Si assume che le incertezze sulle x e sulle y siano indipendenti.
+
+    Examples
+    --------
+    >>> m, sm, c, sc, cov, rho, results = lin_fit(x, ux, y, uy)
+    """
+
     #Converto x, ux, y, uy in array numpy
     x = np.asarray(x, dtype=float)
     ux = np.asarray(ux, dtype=float)
