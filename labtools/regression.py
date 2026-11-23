@@ -163,7 +163,7 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
         # costruisco dei punti x su cui valutare la retta del fit
         xmin = float(np.min(x))
         xmax = float(np.max(x))
-        xmin_plot = xmin-.2*(xmax-xmin))
+        xmin_plot = xmin-.2*(xmax-xmin)
         xmax_plot = xmax+.2*(xmax-xmin)
         if (setrange):
             xmin_plot = xm
