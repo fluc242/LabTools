@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
-import math
 
 #title Funzione del fit lineare (iterabile per incertezze sulle x)
 #title  fit di Santanastasio
@@ -25,6 +23,15 @@ def y_estrapolato(x, m, c, sigma_m, sigma_c, cov_mc):
     return y, uy #ho propagato semplicemente l'incertezza sulla y avendo assunto x noto con precisione massima
 
 def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0., yM=1., verbose=True, plot=False, setrange=False):
+    #Converto in array numpy
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    sd_y = np.asarray(sd_y, dtype=float)
+    
+    #Controllo che le incertezze sulle y siano positive
+    if np.any(sd_y <= 0):
+    raise ValueError("Le incertezze devono essere positive.")
+    
     #pesi
     w_y = np.power(sd_y.astype(float), -2)
 
@@ -60,7 +67,7 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
         # costruisco dei punti x su cui valutare la retta del fit
         xmin = float(np.min(x))
         xmax = float(np.max(x))
-        xmin_plot = max(-0.0005, xmin-.2*(xmax-xmin))
+        xmin_plot = xmin-.2*(xmax-xmin))
         xmax_plot = xmax+.2*(xmax-xmin)
         if (setrange):
             xmin_plot = xm
@@ -102,9 +109,15 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
 #fit iterato (1 volta) con incertezze sulle x
 
 def lin_fit(x, ux, y, uy, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0., yM=1., verbose=True, plot=True, setrange=False):
+    #Converto x, ux, y, uy in array numpy
+    x = np.asarray(x, dtype=float)
+    ux = np.asarray(ux, dtype=float)
+    y = np.asarray(y, dtype=float)
+    uy = np.asarray(uy, dtype=float)
 
+    #Effettuo una prima iterazione mediante lin_fit_0
     m0, sm0, c0, sc0, cov0, rho0, results_0 = lin_fit_0(x, y, uy, verbose=False, plot=False, setrange=False)
-
+    
     #u_y nuove, tenendo conto anche delle u_x
     uy_new = np.sqrt(uy**2+(m0*ux)**2)
 
