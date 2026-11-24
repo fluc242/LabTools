@@ -202,128 +202,118 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
     return m, np.sqrt(var_m), c, np.sqrt(var_c), cov_mc, rho_mc, results
 
 ################################################################
-#fit iterato (1 volta) con incertezze sulle x
+#fit iterato (nmax volte, di default è settata a 1) con incertezze sulle x
 
-def lin_fit(x, ux, y, uy, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0., yM=1., verbose=True, plot=True, setrange=False):
+def lin_fit_iter(x, ux, y, uy, n_max=1, tol=1e-8, verbose=True, plot=False,
+                 xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0., yM=1., setrange=False):
     """
-    Esegue un fit lineare considerando le incertezze sia sulle ascisse
-    sia sulle ordinate, mediante una procedura iterativa a un solo
-    aggiornamento delle incertezze.
+    Fit lineare con incertezze su x e y, iterato fino a convergenza.
 
-    Il modello utilizzato è:
-        y = m*x + c
+    Procedimento
+    ------------
+    1. Primo fit con lin_fit_0 usando solo uy  ->  m0.
+    2. Ripete: uy_eff = sqrt(uy**2 + (m*ux)**2), poi nuovo fit con lin_fit_0  ->  nuovo m.
+    3. Si ferma quando |m_nuovo - m_vecchio| <= tol*|m_nuovo|, oppure dopo n_max iterazioni.
 
-    PROCEDIMENTO
-    -----------
-    1. Esegue un primo fit mediante lin_fit_0(), considerando
-       esclusivamente le incertezze sulle ordinate uy.
-
-    2. Utilizza il coefficiente angolare m0 ottenuto per calcolare
-       le nuove incertezze effettive sulle ordinate:
-
-           uy_new = sqrt(uy**2 + (m0*ux)**2)
-
-    3. Esegue un secondo fit mediante lin_fit_0(), utilizzando
-       le nuove incertezze uy_new.
-
-    Il risultato restituito è quello del secondo fit.
+    Con n_max=1 equivale a lin_fit (un solo aggiornamento).
 
     Parameters
     ----------
-    x : array_like
-        Valori sperimentali delle ascisse.
-
-    ux : array_like
-        Incertezze assolute sui valori di x.
-        Devono essere non negative.
-
-    y : array_like
-        Valori sperimentali delle ordinate.
-
-    uy : array_like
-        Incertezze assolute sui valori di y.
-        Devono essere strettamente positive.
-
-    xlabel : str, optional
-        Etichetta dell'asse x del grafico.
-        Default: "x [ux]".
-
-    ylabel : str, optional
-        Etichetta dell'asse y del grafico.
-        Default: "y [uy]".
-
-    xm, xM : float, optional
-        Limite inferiore e superiore dell'asse x.
-        Vengono utilizzati soltanto se setrange=True.
-
-    ym, yM : float, optional
-        Limite inferiore e superiore dell'asse y.
-        Vengono utilizzati soltanto se setrange=True.
-
-    verbose : bool, optional
-        Se True, stampa i risultati numerici del secondo fit.
-        Default: True.
-
-    plot : bool, optional
-        Se True, rappresenta i dati sperimentali, la retta di fit
-        e le bande di incertezza a 1 sigma.
-        Default: True.
-
-    setrange : bool, optional
-        Se True, utilizza i limiti degli assi specificati
-        attraverso xm, xM, ym e yM.
-        Default: False.
+    x, ux, y, uy : array_like o scalari
+        Dati e incertezze assolute (ux puo' essere 0).
+    n_max : int
+        Numero massimo di aggiornamenti delle incertezze. Default: 50.
+    tol : float
+        Soglia di convergenza RELATIVA sulla pendenza. Default: 1e-8.
+    verbose, plot, xlabel, ylabel, xm, xM, ym, yM, setrange :
+        Come in lin_fit_0 (riferiti al fit finale).
 
     Returns
     -------
-    m : float
-        Coefficiente angolare del secondo fit.
-
-    sm : float
-        Incertezza sul coefficiente angolare.
-
-    c : float
-        Intercetta del secondo fit.
-
-    sc : float
-        Incertezza sull'intercetta.
-
-    cov : float
-        Covarianza tra coefficiente angolare e intercetta.
-
-    rho : float
-        Coefficiente di correlazione tra m e c.
-
-    results : ndarray
-        Array contenente le quantità statistiche del secondo fit,
-        con la stessa struttura restituita da lin_fit_0().
-
-    Notes
-    -----
-    La procedura effettua un solo aggiornamento delle incertezze:
-    non è quindi un algoritmo iterativo fino a convergenza e non
-    costituisce un fit ODR completo.
-
-    Si assume che le incertezze sulle x e sulle y siano indipendenti.
-
-    Examples
-    --------
-    >>> m, sm, c, sc, cov, rho, results = lin_fit(x, ux, y, uy)
+    m, sm, c, sc, cov, rho, results :
+        Come lin_fit_0 (fit finale).
+    uy_eff : ndarray
+        Incertezze sulle y effettivamente usate nel fit finale (servono per il chi2).
+    n_iter : int
+        Numero di aggiornamenti eseguiti.
     """
+    # Converto in array (gli scalari diventano array lunghi quanto x)
+    x  = np.asarray(x,  dtype=float)
+    y  = np.asarray(y,  dtype=float)
+    ux = np.asarray(ux, dtype=float) * np.ones_like(x)
+    uy = np.asarray(uy, dtype=float) * np.ones_like(x)
 
-    #Converto x, ux, y, uy in array numpy
-    x = np.asarray(x, dtype=float)
-    ux = np.asarray(ux, dtype=float)
-    y = np.asarray(y, dtype=float)
-    uy = np.asarray(uy, dtype=float)
+    # Primo fit: solo incertezze sulle y
+    m_old = lin_fit_0(x, y, uy, verbose=False)[0]
 
-    #Effettuo una prima iterazione mediante lin_fit_0
-    m0, sm0, c0, sc0, cov0, rho0, results_0 = lin_fit_0(x, y, uy, verbose=False, plot=False, setrange=False)
-    
-    #u_y nuove, tenendo conto anche delle u_x
-    uy_new = np.sqrt(uy**2+(m0*ux)**2)
+    converged = False
+    for n_iter in range(1, n_max + 1):
+        uy_eff = np.sqrt(uy**2 + (m_old * ux)**2)          # incertezze effettive con il m corrente
+        m_new = lin_fit_0(x, y, uy_eff, verbose=False)[0]  # nuovo fit
+        converged = abs(m_new - m_old) <= tol * abs(m_new)
+        m_old = m_new
+        if converged:
+            break
 
-    m, sm, c, sc, cov, rho, results = lin_fit_0(x, y, uy_new, xlabel, ylabel, xm, xM, ym, yM,
-            verbose, plot, setrange)
+    if not converged:
+        print(f"ATTENZIONE: nessuna convergenza dopo {n_max} iterazioni (tol = {tol}).")
 
-    return m, sm, c, sc, cov, rho, results
+    # Fit finale con le incertezze uy_eff (stampa/grafico opzionali)
+    m, sm, c, sc, cov, rho, results = lin_fit_0(x, y, uy_eff, xlabel, ylabel, xm, xM, ym, yM,
+                                                verbose, plot, setrange)
+    if verbose:
+        print('iterazioni =', n_iter)
+
+    return m, sm, c, sc, cov, rho, results, uy_eff, n_iter
+
+#Funzione di chi2, eventualmente impostabile come chi2 ridotto
+def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2, verbose=True):
+    """
+    Chi quadro di una retta y = m*x + c.
+
+    chi2 = somma_i [ (y_i - m*x_i - c) / uy_i ]**2        ndf = N - n_par
+
+    Parameters
+    ----------
+    x, y : array_like
+        Dati.
+    uy : array_like o scalare
+        Incertezze sulle y da usare nel chi2. Devono essere QUELLE USATE NEL FIT
+        (per lin_fit_iter: uy_eff).
+    m, c : float
+        Pendenza e intercetta del fit.
+    ridotto : bool
+        False -> restituisce chi2;  True -> restituisce chi2/ndf.
+    n_par : int
+        Numero di parametri stimati (2 per m e c). Default: 2.
+
+    Returns
+    -------
+    valore : float
+        chi2 oppure chi2/ndf.
+    ndf : int
+        Gradi di liberta'.
+    """
+    x  = np.asarray(x,  dtype=float)
+    y  = np.asarray(y,  dtype=float)
+    uy = np.asarray(uy, dtype=float) * np.ones_like(x)
+
+    if np.any(uy <= 0):
+        raise ValueError("Le incertezze devono essere positive.")
+    if x.shape != y.shape:
+        raise ValueError("x e y devono avere la stessa lunghezza.")
+
+    ndf = len(x) - n_par
+    if ndf <= 0:
+        raise ValueError("ndf <= 0: servono piu' punti che parametri.")
+
+    chi2 = np.sum(((y - (m * x + c)) / uy)**2)
+    valore = chi2 / ndf if ridotto else chi2
+
+    if verbose:
+        print('N         = ', len(x))
+        print('ndf       = ', ndf)
+        print('chi2      = ', round(chi2, 4))
+        print('chi2/ndf  = ', round(chi2 / ndf, 4))
+
+    return valore, ndf
