@@ -126,7 +126,7 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
     
     #Controllo che le incertezze sulle y siano positive
     if np.any(sd_y <= 0):
-    raise ValueError("Le incertezze devono essere positive.")
+        raise ValueError("Le incertezze devono essere positive.")
     
     #pesi
     w_y = np.power(sd_y.astype(float), -2)
