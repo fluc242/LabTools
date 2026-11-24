@@ -222,7 +222,7 @@ def lin_fit_iter(x, ux, y, uy, n_max=1, tol=1e-8, verbose=True, plot=False,
     x, ux, y, uy : array_like o scalari
         Dati e incertezze assolute (ux puo' essere 0).
     n_max : int
-        Numero massimo di aggiornamenti delle incertezze. Default: 50.
+        Numero massimo di aggiornamenti delle incertezze. Default: 1.
     tol : float
         Soglia di convergenza RELATIVA sulla pendenza. Default: 1e-8.
     verbose, plot, xlabel, ylabel, xm, xM, ym, yM, setrange :
