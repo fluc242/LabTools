@@ -266,48 +266,37 @@ def lin_fit_iter(x, ux, y, uy, n_max=1, tol=1e-8, verbose=True, plot=False,
 
     return m, sm, c, sc, cov, rho, results, uy_eff, n_iter
 
-#Funzione di chi2, eventualmente impostabile come chi2 ridotto
-def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2, verbose=True):
+#Chi2_lin
+def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2,
+             verbose=True, plot=False,
+             xlabel="x", ylabel="Residui"):
+
     """
-    Chi quadro di una retta y = m*x + c.
+    Calcola il chi quadro di una retta y = m*x + c.
 
-    chi2 = somma_i [ (y_i - m*x_i - c) / uy_i ]**2        ndf = N - n_par
-
-    Parameters
-    ----------
-    x, y : array_like
-        Dati.
-    uy : array_like o scalare
-        Incertezze sulle y da usare nel chi2. Devono essere QUELLE USATE NEL FIT
-        (per lin_fit_iter: uy_eff).
-    m, c : float
-        Pendenza e intercetta del fit.
-    ridotto : bool
-        False -> restituisce chi2;  True -> restituisce chi2/ndf.
-    n_par : int
-        Numero di parametri stimati (2 per m e c). Default: 2.
-
-    Returns
-    -------
-    valore : float
-        chi2 oppure chi2/ndf.
-    ndf : int
-        Gradi di liberta'.
+    Se plot=True, rappresenta i residui rispetto a x.
     """
-    x  = np.asarray(x,  dtype=float)
-    y  = np.asarray(y,  dtype=float)
+
+    x  = np.asarray(x, dtype=float)
+    y  = np.asarray(y, dtype=float)
     uy = np.asarray(uy, dtype=float) * np.ones_like(x)
 
     if np.any(uy <= 0):
         raise ValueError("Le incertezze devono essere positive.")
-    if x.shape != y.shape:
-        raise ValueError("x e y devono avere la stessa lunghezza.")
+
+    if x.shape != y.shape or x.shape != uy.shape:
+        raise ValueError("x, y e uy devono avere la stessa lunghezza.")
 
     ndf = len(x) - n_par
+
     if ndf <= 0:
         raise ValueError("ndf <= 0: servono piu' punti che parametri.")
 
-    chi2 = np.sum(((y - (m * x + c)) / uy)**2)
+    # Calcolo dei residui
+    residui = y - (m*x + c)
+
+    # Chi quadro
+    chi2 = np.sum((residui / uy)**2)
     valore = chi2 / ndf if ridotto else chi2
 
     if verbose:
@@ -315,5 +304,33 @@ def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2, verbose=True):
         print('ndf       = ', ndf)
         print('chi2      = ', round(chi2, 4))
         print('chi2/ndf  = ', round(chi2 / ndf, 4))
+
+    # Grafico dei residui
+    if plot:
+
+        plt.figure(figsize=(8, 5))
+
+        plt.errorbar(
+            x, residui,
+            yerr=uy,
+            fmt='o',
+            color='black',
+            capsize=3,
+            label='Residui'
+        )
+
+        plt.axhline(
+            0,
+            color='red',
+            linestyle='--',
+            label='Residuo nullo'
+        )
+
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title('Residui del fit lineare')
+        plt.grid(alpha=0.3)
+        plt.legend()
+        plt.show()
 
     return valore, ndf
