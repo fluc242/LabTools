@@ -154,20 +154,40 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
         print ('cov(m, c) = ', cov_mc.round(8))
         print ('rho(m, c) = ', rho_mc.round(8))
 
+    
+
     if (plot):
 
-        # rappresento i dati
-        plt.errorbar(x, y, yerr=sd_y, xerr=0, ls='', marker='.',
-                     color="black",label='dati')
+        # Rappresento i dati sperimentali selezionando un sottoinsieme
+        step = max(1, len(x) // 200)
+
+        # Creo gli indici dei punti da rappresentare
+        idx = np.arange(0, len(x), step)
+
+        # Mi assicuro di includere anche l'ultimo punto
+        if idx[-1] != len(x) - 1:
+            idx = np.append(idx, len(x) - 1)
+
+        plt.errorbar(
+            x[idx], y[idx],
+            yerr=sd_y[idx],
+            xerr=0,
+            ls='',
+            marker='.',
+            color="black",
+            label='dati'
+        )
 
         # costruisco dei punti x su cui valutare la retta del fit
         xmin = float(np.min(x))
         xmax = float(np.max(x))
         xmin_plot = xmin-.2*(xmax-xmin)
         xmax_plot = xmax+.2*(xmax-xmin)
+
         if (setrange):
             xmin_plot = xm
             xmax_plot = xM
+
         x1 = np.linspace(xmin_plot, xmax_plot, 100)
         y1 = my_line(x1, m, c)
 
@@ -176,30 +196,45 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title('Fit lineare')
-        plt.xlim(xmin_plot,xmax_plot)
+        plt.xlim(xmin_plot, xmax_plot)
+
         if (setrange):
-            plt.ylim(ym,yM)
+            plt.ylim(ym, yM)
 
         # rappresento le incertezze sulla retta
-        y1_plus_1sigma = y1+y_estrapolato(x1, m, c, np.sqrt(var_m), np.sqrt(var_c), cov_mc)[1]
-        y1_minus_1sigma = y1-y_estrapolato(x1, m, c, np.sqrt(var_m), np.sqrt(var_c), cov_mc)[1]
-        plt.plot(x1,y1_plus_1sigma, linestyle='-', color="orange", label=r'fit $\pm 1\sigma$')
-        plt.plot(x1,y1_minus_1sigma, linestyle='-', color="orange")
+        y1_plus_1sigma = y1 + y_estrapolato(
+            x1, m, c, np.sqrt(var_m), np.sqrt(var_c), cov_mc
+        )[1]
 
-        plt.grid(linestyle='-',color='#D5D1CD',alpha=.4)
+        y1_minus_1sigma = y1 - y_estrapolato(
+            x1, m, c, np.sqrt(var_m), np.sqrt(var_c), cov_mc
+        )[1]
 
+        plt.plot(x1, y1_plus_1sigma, linestyle='-', color="orange",
+                 label=r'fit $\pm 1\sigma$')
+        plt.plot(x1, y1_minus_1sigma, linestyle='-', color="orange")
 
+        plt.grid(linestyle='-', color='#D5D1CD', alpha=.4)
         plt.legend()
 
-    results = np.array([my_mean(x, w_y),
-                        my_mean(y, w_y),
-                        my_mean(x**2, w_y),
-                        my_mean(x*y, w_y),
-                        my_var(x, w_y),
-                        my_cov(x,y, w_y),
-                        np.sum(w_y)])
+    results = np.array([
+        my_mean(x, w_y),
+        my_mean(y, w_y),
+        my_mean(x**2, w_y),
+        my_mean(x*y, w_y),
+        my_var(x, w_y),
+        my_cov(x, y, w_y),
+        np.sum(w_y)
+    ])
 
     return m, np.sqrt(var_m), c, np.sqrt(var_c), cov_mc, rho_mc, results
+
+
+
+
+
+
+
 
 ################################################################
 #fit iterato (nmax volte, di default è settata a 1) con incertezze sulle x
@@ -310,9 +345,17 @@ def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2,
 
         plt.figure(figsize=(8, 5))
 
+        # Rappresento un sottoinsieme dei residui per evitare sovrapposizioni
+        step = max(1, len(x) // 200)
+        idx = np.arange(0, len(x), step)
+
+        # Mi assicuro di includere anche l'ultimo punto
+        if idx[-1] != len(x) - 1:
+            idx = np.append(idx, len(x) - 1)
+
         plt.errorbar(
-            x, residui,
-            yerr=uy,
+            x[idx], residui[idx],
+            yerr=uy[idx],
             fmt='o',
             color='black',
             capsize=3,
