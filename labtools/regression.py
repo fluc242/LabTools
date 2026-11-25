@@ -159,24 +159,28 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
     if (plot):
 
         # Rappresento i dati sperimentali selezionando un sottoinsieme
-        step = max(1, len(x) // 200)
+        plt.figure(figsize=(8, 5))
 
-        # Creo gli indici dei punti da rappresentare
-        idx = np.arange(0, len(x), step)
+        # Rappresento circa 100 punti, selezionati uniformemente.
+        n_plot = min(100, len(x))
+        idx = np.unique(np.linspace(0, len(x) - 1, n_plot, dtype=int))    
 
-        # Mi assicuro di includere anche l'ultimo punto
-        if idx[-1] != len(x) - 1:
-            idx = np.append(idx, len(x) - 1)
-
+        
         plt.errorbar(
             x[idx], y[idx],
             yerr=sd_y[idx],
             xerr=0,
-            ls='',
-            marker='.',
-            color="black",
-            label='dati'
+            ls='none',
+            marker='o',
+            markersize=3,
+            color='black',
+            ecolor='black',
+            elinewidth=0.7,
+            capsize=1.5,
+            alpha=0.55,
+            label='dati (sottoinsieme)'
         )
+
 
         # costruisco dei punti x su cui valutare la retta del fit
         xmin = float(np.min(x))
@@ -216,6 +220,8 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
 
         plt.grid(linestyle='-', color='#D5D1CD', alpha=.4)
         plt.legend()
+        plt.tight_layout()
+        plt.show()    
 
     results = np.array([
         my_mean(x, w_y),
@@ -228,13 +234,6 @@ def lin_fit_0(x, y, sd_y, xlabel="x [ux]", ylabel="y [uy]", xm=0., xM=1., ym=0.,
     ])
 
     return m, np.sqrt(var_m), c, np.sqrt(var_c), cov_mc, rho_mc, results
-
-
-
-
-
-
-
 
 ################################################################
 #fit iterato (nmax volte, di default è settata a 1) con incertezze sulle x
