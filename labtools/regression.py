@@ -344,21 +344,29 @@ def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2,
 
         plt.figure(figsize=(8, 5))
 
-        # Rappresento un sottoinsieme dei residui per evitare sovrapposizioni
-        step = max(1, len(x) // 200)
-        idx = np.arange(0, len(x), step)
-
-        # Mi assicuro di includere anche l'ultimo punto
-        if idx[-1] != len(x) - 1:
-            idx = np.append(idx, len(x) - 1)
-
-        plt.errorbar(
-            x[idx], residui[idx],
-            yerr=uy[idx],
-            fmt='o',
+        # Mostro tutti i residui come punti piccoli, senza barre d'errore.
+        plt.plot(
+            x, residui,
+            linestyle='none',
+            marker='o',
+            markersize=2.5,
             color='black',
-            capsize=3,
+            alpha=0.55,
             label='Residui'
+        )
+
+        # Le barre d'errore sono mostrate solo su un sottoinsieme uniforme.
+        n_errorbars = min(40, len(x))
+        idx_err = np.unique(np.linspace(0, len(x) - 1, n_errorbars, dtype=int))
+        plt.errorbar(
+            x[idx_err], residui[idx_err],
+            yerr=uy[idx_err],
+            fmt='none',
+            ecolor='black',
+            elinewidth=0.8,
+            capsize=2,
+            alpha=0.45,
+            label='Incertezze (sottoinsieme)'
         )
 
         plt.axhline(
@@ -373,6 +381,7 @@ def chi2_lin(x, y, uy, m, c, ridotto=False, n_par=2,
         plt.title('Residui del fit lineare')
         plt.grid(alpha=0.3)
         plt.legend()
+        plt.tight_layout()
         plt.show()
 
     return valore, ndf
